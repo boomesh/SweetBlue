@@ -2,11 +2,8 @@ package com.idevicesinc.sweetblue.rx.schedulers;
 
 
 import com.idevicesinc.sweetblue.P_Bridge;
-import com.idevicesinc.sweetblue.P_SweetHandler;
 import com.idevicesinc.sweetblue.rx.plugins.RxSweetBluePlugins;
-
 import java.util.concurrent.Callable;
-
 import io.reactivex.Scheduler;
 
 /**

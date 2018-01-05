@@ -20,6 +20,7 @@ import com.idevicesinc.sweetblue.ScanOptions;
 import com.idevicesinc.sweetblue.annotations.Nullable;
 import com.idevicesinc.sweetblue.rx.annotations.HotObservable;
 import com.idevicesinc.sweetblue.rx.schedulers.SweetBlueSchedulers;
+import com.idevicesinc.sweetblue.utils.GattDatabase;
 import com.idevicesinc.sweetblue.utils.Pointer;
 import java.util.HashMap;
 import java.util.Map;
@@ -67,9 +68,12 @@ public final class RxBleManager
 
 
     public static final RxBleDeviceTransformer BLE_DEVICE_TRANSFORMER = new RxBleDeviceTransformer();
+    public static final RxBleServerTransformer BLE_SERVER_TRANSFORMER = new RxBleServerTransformer();
 
     // Map to hold instances of RxBleDevice. This is to avoid creating multiple instances of RxBleDevice for a single instance of BleDevice
     private static final Map<String, RxBleDevice> m_deviceMap = new HashMap<>();
+
+    private static final Map<BleServer, RxBleServer> m_serverMap = new HashMap<>();
 
     private static RxBleManager s_instance;
 
@@ -715,6 +719,26 @@ public final class RxBleManager
     }
 
     /**
+     * Rx-ified version of {@link BleManager#getServer(BleServer.IncomingListener, GattDatabase, BleServer.ServiceAddListener)}.
+     *
+     * NOTE: The device creation is performed on the thread which SweetBlue is using, and this method is blocking.
+     */
+    public RxBleServer getServer(final BleServer.IncomingListener listener, final GattDatabase db, final BleServer.ServiceAddListener addListener)
+    {
+        return Single.create(new SingleOnSubscribe<BleServer>()
+        {
+            @Override
+            public void subscribe(SingleEmitter<BleServer> emitter) throws Exception
+            {
+                if (emitter.isDisposed()) return;
+
+                emitter.onSuccess(m_manager.getServer(listener, db, addListener));
+            }
+        }).map(BLE_SERVER_TRANSFORMER).subscribeOn(SweetBlueSchedulers.sweetBlueThread()).blockingGet();
+    }
+
+
+    /**
      * Disconnects all devices, shuts down the BleManager, and it's backing thread, and unregisters any receivers that may be in use.
      * This also clears out the {@link BleManager}, and {@link RxBleManager} static instances. This is meant to be called upon application exit. However, to use it again,
      * just call {@link BleManager#get(Context)}, or {@link BleManager#get(Context, BleManagerConfig)} again.
@@ -805,6 +829,17 @@ public final class RxBleManager
             m_deviceMap.put(device.getMacAddress(), rxDevice);
         }
         return rxDevice;
+    }
+
+    static RxBleServer getOrCreateServer(@Nullable(Nullable.Prevalence.NEVER) BleServer server)
+    {
+        RxBleServer rxServer = m_serverMap.get(server);
+        if (rxServer == null)
+        {
+            rxServer = RxBleServer.create(server);
+            m_serverMap.put(server, rxServer);
+        }
+        return rxServer;
     }
 
 }

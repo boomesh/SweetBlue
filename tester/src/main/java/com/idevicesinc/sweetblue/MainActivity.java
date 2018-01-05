@@ -124,7 +124,7 @@ public class MainActivity extends Activity
 //        config.reconnectFilter = new BleNodeConfig.DefaultReconnectFilter(Interval.ONE_SEC, Interval.secs(3.0), Interval.FIVE_SECS, Interval.secs(45));
         config.uhOhCallbackThrottle = Interval.secs(60.0);
 
-        config.defaultScanFilter = e -> BleManagerConfig.ScanFilter.Please.acknowledgeIf(e.name_normalized().contains("rpi"));
+        config.defaultScanFilter = e -> BleManagerConfig.ScanFilter.Please.acknowledgeIf(e.name_normalized().contains("wall"));
 
         mgr = BleManager.get(this, config);
 
@@ -218,6 +218,7 @@ public class MainActivity extends Activity
             {
                 menu.add(3, 3, 0, "Request Larger MTU");
                 menu.add(2, 2, 0, "Disconnect");
+                menu.add(4, 4, 0, "Poll RSSI");
             }
         }
     }
@@ -248,7 +249,21 @@ public class MainActivity extends Activity
             );
             return true;
         }
+        else if (item.getItemId() == 4)
+        {
+            mDevices.get(info.position).startRssiPoll(Interval.FIVE_SECS, new RssiListener());
+        }
         return super.onContextItemSelected(item);
+    }
+
+    private static class RssiListener implements BleDevice.ReadWriteListener
+    {
+
+        @Override
+        public void onEvent(BleDevice.ReadWriteListener.ReadWriteEvent e)
+        {
+            Log.e("-+*Rssi*+-", e.toString());
+        }
     }
 
     private class ScanAdaptor extends ArrayAdapter<BleDevice>
